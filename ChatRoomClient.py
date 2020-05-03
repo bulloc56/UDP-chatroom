@@ -1,20 +1,62 @@
 import socket
+import os
+import sys
+import threading
+import time
 
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-print('Server:Socket Created')
+bad_username = False
+Muted = False
+blocklist = []
+server_ip = 'localhost'
+server_port = 5432
+username = input('enter your username: ')
+sock = socket.socket( socket.AF_INET, # Internet
+                      socket.SOCK_DGRAM ) # UDP
 
-host = 'localhost'
-port = 5433
+join_message = username+":@_@join"
+sock.sendto( join_message.encode(), (server_ip, server_port) )
 
-message = 'hello'
+def get_messages():
+  global sock, username, Muted, blocklist, bad_username
+  while True:
+    data = None
+    try:
+      data, addr = sock.recvfrom( 1024 ) # buffer size is 1024 bytes
+    except socket.error:
+      # wait a bit
+      time.sleep(0.01)
+    if data and not Muted:
+        #print data
+        message = data.decode()
+        if (message == "Username taken. Choose a different username."):
+            bad_username = True
+        else:
+            print(message)
 
-try:
-    print('Client'+message)
-    client_socket.sendto(message.encode(), (host,5432))
+def get_input():
+    global sock, username, Muted, blocklist, bad_username
+    while True:
+        user_input = input()
+        if (bad_username):
+            username = input("Enter a different username: ")
+            join_message = username+":@_@join"
+            sock.sendto( join_message.encode(), (server_ip, server_port) )
+            bad_username = False
+        else:
+            if (user_input == "@_@leave"):
+                message = username+":"+user_input
+                sock.sendto( message.encode(), (server_ip, server_port) )
+                os._exit(1)
+            elif (user_input == "@_@mute"):
+                Muted = True
+            elif (user_input == "@_@unmute"):
+                Muted = False
+            else:
+                message = username+":"+user_input
+                sock.sendto( message.encode(), (server_ip, server_port) )
 
-    data, server = client_socket.recvfrom(4096)
-    data = data.decode()
-    print('Client' + data)
-finally:
-    print('Client closing socket')
-    client_socket.close()
+x = threading.Thread(target=get_input, args=())    
+x.start()
+
+y = threading.Thread(target=get_messages, args=())
+y.start()
