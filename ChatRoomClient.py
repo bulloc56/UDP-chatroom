@@ -28,9 +28,11 @@ def get_messages():
     if data and not Muted:
         #print data
         message = data.decode()
+        split_message = message.split(":")
         if (message == "Username taken. Choose a different username."):
             bad_username = True
-        else:
+            print(message)
+        elif (split_message[0] not in blocklist):
             print(message)
 
 def get_input():
@@ -51,6 +53,13 @@ def get_input():
                 Muted = True
             elif (user_input == "@_@unmute"):
                 Muted = False
+            elif ("@_@block" in user_input):
+                blocked_input = user_input.split(":")
+                blocklist.append(blocked_input[1])
+            elif ("@_@unblock" in user_input):
+                blocked_input = user_input.split(":")
+                if blocked_input[1] in blocklist:
+                    blocklist.remove(blocked_input[1])
             else:
                 message = username+":"+user_input
                 sock.sendto( message.encode(), (server_ip, server_port) )
